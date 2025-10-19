@@ -14,7 +14,7 @@ POSITION_MANAGER = Web3.to_checksum_address('0xbd216513d74c8cf14cf4747e6aaa6420f
 STATE_VIEW = Web3.to_checksum_address('0x7ffe42c4a5deea5b0fec41c94c136cf115597227')
 
 # Position token ID
-TOKEN_ID = 85500  # Test with 85000 
+TOKEN_ID = 85000  # Test with 85000 
 
 w3 = Web3(Web3.HTTPProvider(RPC_URL))  # Add verify=False if needed: Web3.HTTPProvider(RPC_URL, request_kwargs={'verify': False}))
 
