@@ -6,4 +6,4 @@
 `3. run python3 v3.py for v3` \
 `4. run python3 v4.py for v4` 
 
-![screenshot](v4.png)
+![screenshot](foo.png)
