@@ -10,6 +10,8 @@ load_dotenv()
 # RPC_URL = os.getenv('ETH_RPC_URL', 'https://eth-mainnet.g.alchemy.com/v2/YOUR_ALCHEMY_KEY')
 RPC_URL = "https://eth.llamarpc.com"
 RPC_URL = "https://eth.drpc.org"
+RPC_URL = "https://rpc.payload.de"
+
 
 ## Contract addresses
 POSITION_MANAGER = Web3.to_checksum_address('0xbd216513d74c8cf14cf4747e6aaa6420ff64ee9e')
