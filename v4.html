@@ -252,8 +252,8 @@
         output.textContent =
           `✅ Position ${tokenId}\n` +
           `Owner: ${owner}\n\n` +
-          `Token0 (${token0Name}): ${token0FeesAdjusted} (USD: ${token0Usd.toFixed(2)})\n` +
-          `Token1 (${token1Name}): ${token1FeesAdjusted} (USD: ${token1Usd.toFixed(2)})\n` +
+          `Token0 (${token0Name}): ${token0FeesAdj} (USD: ${token0Usd.toFixed(2)})\n` +
+          `Token1 (${token1Name}): ${token1FeesAdj} (USD: ${token1Usd.toFixed(2)})\n` +
           `Total USD: ${totalUsd.toFixed(2)}`;
       } catch (e) {
         document.getElementById('output').textContent = `❌ Error: ${e.message}`;
