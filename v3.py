@@ -15,6 +15,7 @@ load_dotenv()
 # Use Alchemy as fallback (free tier available at alchemy.com)
 # RPC_URL = os.getenv('ETH_RPC_URL', 'https://eth-mainnet.g.alchemy.com/v2/YOUR_ALCHEMY_KEY')  # Or keep Infura if fixed
 RPC_URL ="https://eth.llamarpc.com"
+RPC_URL = "https://eth.drpc.org"
  
 ## Contract addresses
 POSITION_MANAGER = Web3.to_checksum_address('0xC36442b4a4522E871399CD717aBDD847Ab11FE88')
