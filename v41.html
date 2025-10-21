@@ -69,13 +69,6 @@
     const V3_FACTORY = '0x1F98431c8aD98523631AE4a59f267346ea31F984';
     const V2_FACTORY = '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f';
 
-    const publicRpcs = [
-      'https://eth.llamarpc.com',
-      'https://eth.drpc.org',
-      'https://eth-mainnet.public.blastapi.io',
-      'https://rpc.payload.de'
-    ];
-
     const positionManagerAbi = [
       {
         "inputs": [{"internalType": "uint256", "name": "tokenId", "type": "uint256"}],
@@ -247,30 +240,6 @@
       return parseFloat(intPart + frac);
     }
 
-    async function getFastestProvider(rpcs) {
-      const testPromises = rpcs.map(async (url) => {
-        const start = performance.now();
-        let provider;
-        try {
-          provider = new ethers.JsonRpcProvider(url);
-          await provider.getBlockNumber();
-          const end = performance.now();
-          return { provider, latency: end - start };
-        } catch (e) {
-          return null;
-        }
-      });
-
-      const results = await Promise.all(testPromises);
-      const validResults = results.filter(r => r !== null);
-      if (validResults.length === 0) {
-        throw new Error('No valid public RPC available');
-      }
-      return validResults.reduce((fastest, current) => 
-        current.latency < fastest.latency ? current : fastest
-      ).provider;
-    }
-
     async function get_eth_usd(provider) {
       try {
         const v3Factory = new ethers.Contract(V3_FACTORY, v3FactoryAbi, provider);
@@ -392,14 +361,8 @@
         let token1Manual = parseFloat(document.getElementById('token1Price').value) || 0;
         const infuraKey = document.getElementById('infuraKey').value.trim();
 
-        let provider;
-        if (infuraKey) {
-          const rpcUrl = `https://mainnet.infura.io/v3/${infuraKey}`;
-          provider = new ethers.JsonRpcProvider(rpcUrl);
-        } else {
-          provider = await getFastestProvider(publicRpcs);
-        }
-
+        const rpcUrl = infuraKey ? `https://mainnet.infura.io/v3/${infuraKey}` : 'https://eth.llamarpc.com';
+        const provider = new ethers.JsonRpcProvider(rpcUrl);
         const positionManager = new ethers.Contract(POSITION_MANAGER, positionManagerAbi, provider);
         const stateView = new ethers.Contract(STATE_VIEW, stateViewAbi, provider);
 
