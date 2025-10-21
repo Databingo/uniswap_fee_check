@@ -35,9 +35,10 @@
   <h1>Uniswap V4 Fee Checker</h1>
 
   <div class="input-group">
-    <label>Token ID:</label>
+    <label>LP NFT ID:</label>
     <input type="number" id="tokenId" value="85000">
   </div>
+  <div style="display:none;">
   <div class="input-group">
     <label>Token0 Price (USD):</label>
     <input type="number" id="token0Price" value="0" placeholder="Enter Token0 price in USD (optional override)">
@@ -49,6 +50,7 @@
   <div class="input-group">
     <label>Infura API Key (optional):</label>
     <input type="text" id="infuraKey" value="" placeholder="Enter Infura API Key (optional)">
+  </div>
   </div>
 
   <button onclick="checkFees()">Check Fees</button>
