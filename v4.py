@@ -13,52 +13,50 @@ RPC_URL = "https://eth.drpc.org"
 RPC_URL = "https://eth-mainnet.public.blastapi.io"
 RPC_URL = "https://rpc.payload.de"
 
-## Contract addresses
-POSITION_MANAGER = Web3.to_checksum_address('0xbd216513d74c8cf14cf4747e6aaa6420ff64ee9e')
-STATE_VIEW = Web3.to_checksum_address('0x7ffe42c4a5deea5b0fec41c94c136cf115597227')
-
 # Position token ID
 TOKEN_ID = 85000  # Test with 85000 
-
+ 
 w3 = Web3(Web3.HTTPProvider(RPC_URL))  # Add verify=False if needed: Web3.HTTPProvider(RPC_URL, request_kwargs={'verify': False}))
 
-# ABI for PositionManager.getPoolAndPositionInfo
-position_manager_abi = [
-    {
-        "inputs": [{"internalType": "uint256", "name": "tokenId", "type": "uint256"}],
-        "name": "getPoolAndPositionInfo",
-        "outputs": [
-            {
-                "components": [
-                    {"internalType": "Currency", "name": "currency0", "type": "address"},
-                    {"internalType": "Currency", "name": "currency1", "type": "address"},
-                    {"internalType": "uint24", "name": "fee", "type": "uint24"},
-                    {"internalType": "int24", "name": "tickSpacing", "type": "int24"},
-                    {"internalType": "address", "name": "hooks", "type": "address"}
-                ],
-                "internalType": "struct PoolKey",
-                "name": "poolKey",
-                "type": "tuple"
-            },
-            {"internalType": "uint256", "name": "info", "type": "uint256"}
+# --- Core addresses ---
+POSITION_MANAGER = Web3.to_checksum_address('0xbd216513d74c8cf14cf4747e6aaa6420ff64ee9e')
+STATE_VIEW = Web3.to_checksum_address('0x7ffe42c4a5deea5b0fec41c94c136cf115597227')
+WETH_ADDRESS = Web3.to_checksum_address('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2')
+CHAINLINK_ETH_USD = Web3.to_checksum_address("0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419")
+V4_POOL_MANAGER =  Web3.to_checksum_address('0x000000000004444c5dc75cB358380D2e3dE08A90')
+V4_STATE_VIEW = Web3.to_checksum_address('0x7ffe42c4a5deea5b0fec41c94c136cf115597227')
+
+ZERO = '0x0000000000000000000000000000000000000000'
+
+# --- ABIs ---
+position_manager_abi = [{
+    "inputs": [{"internalType": "uint256", "name": "tokenId", "type": "uint256"}],
+    "name": "getPoolAndPositionInfo",
+    "outputs": [{
+        "components": [
+            {"internalType": "address", "name": "currency0", "type": "address"},
+            {"internalType": "address", "name": "currency1", "type": "address"},
+            {"internalType": "uint24", "name": "fee", "type": "uint24"},
+            {"internalType": "int24", "name": "tickSpacing", "type": "int24"},
+            {"internalType": "address", "name": "hooks", "type": "address"}],
+        "internalType": "struct PoolKey", "name": "poolKey", "type": "tuple"},
+        {"internalType": "uint256", "name": "info", "type": "uint256"}],
+    "stateMutability": "view", "type": "function"}]
+
+v4_pool_manager_abi = [{
+        "inputs": [
+            {"internalType": "address", "name": "currency0", "type": "address"},
+            {"internalType": "address", "name": "currency1", "type": "address"},
+            {"internalType": "uint24", "name": "fee", "type": "uint24"},
+            {"internalType": "int24", "name": "tickSpacing", "type": "int24"},
+            {"internalType": "address", "name": "hooks", "type": "address"}
         ],
+        "name": "getPool",
+        "outputs": [{"internalType": "address", "name": "pool", "type": "address"}],
         "stateMutability": "view",
         "type": "function"
-    }
-]
+    }]
 
-# ERC-721 ABI for ownerOf
-erc721_abi = [
-    {
-        "inputs": [{"internalType": "uint256", "name": "tokenId", "type": "uint256"}],
-        "name": "ownerOf",
-        "outputs": [{"internalType": "address", "name": "owner", "type": "address"}],
-        "stateMutability": "view",
-        "type": "function"
-    }
-]
-
-# ABI for StateView.getPositionInfo and getFeeGrowthInside
 state_view_abi = [
     {
         "inputs": [
@@ -93,42 +91,207 @@ state_view_abi = [
     }
 ]
 
-# ERC20 ABI for decimals
-erc20_abi = [
-    {
-        "inputs": [],
-        "name": "decimals",
-        "outputs": [{"internalType": "uint8", "name": "", "type": "uint8"}],
-        "stateMutability": "view",
-        "type": "function"
-    }
-]
+v4_state_view_abi =  [{
+    "inputs": [{"internalType": "bytes32", "name": "poolId", "type": "bytes32"}],
+    "name": "getSlot0",
+    "outputs": [
+        {"internalType": "uint160", "name": "sqrtPriceX96", "type": "uint160"},
+        {"internalType": "int24", "name": "tick", "type": "int24"}
+    ],
+    "stateMutability": "view", "type": "function"
+}]
 
+erc721_abi = [{
+    "inputs": [{"internalType": "uint256", "name": "tokenId", "type": "uint256"}],
+    "name": "ownerOf",
+    "outputs": [{"internalType": "address", "name": "owner", "type": "address"}],
+    "stateMutability": "view", "type": "function"}]
+
+erc20_abi = [{"inputs": [], "name": "decimals", "outputs": [{"internalType": "uint8", "name": "", "type": "uint8"}],
+              "stateMutability": "view", "type": "function"}]
+
+v3_factory_abi = [{"inputs": [{"internalType": "address", "name": "tokenA", "type": "address"},
+                              {"internalType": "address", "name": "tokenB", "type": "address"},
+                              {"internalType": "uint24", "name": "fee", "type": "uint24"}],
+                   "name": "getPool", "outputs": [{"internalType": "address", "name": "pool", "type": "address"}],
+                   "stateMutability": "view", "type": "function"}]
+
+v2_factory_abi = [{"inputs": [{"internalType": "address", "name": "tokenA", "type": "address"},
+                              {"internalType": "address", "name": "tokenB", "type": "address"}],
+                   "name": "getPair", "outputs": [{"internalType": "address", "name": "pair", "type": "address"}],
+                   "stateMutability": "view", "type": "function"}]
+
+chainlink_abi = [{"inputs": [], "name": "latestAnswer", "outputs": [{"internalType": "int256", "name": "", "type": "int256"}],
+                  "stateMutability": "view", "type": "function"}]
+
+# --- Contracts ---
 position_manager = w3.eth.contract(address=POSITION_MANAGER, abi=position_manager_abi)
 state_view = w3.eth.contract(address=STATE_VIEW, abi=state_view_abi)
 erc721 = w3.eth.contract(address=POSITION_MANAGER, abi=erc721_abi)
+v3_factory = w3.eth.contract(address=Web3.to_checksum_address("0x1F98431c8aD98523631AE4a59f267346ea31F984"), abi=v3_factory_abi)
+v2_factory = w3.eth.contract(address=Web3.to_checksum_address("0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"), abi=v2_factory_abi)
+chainlink_eth = w3.eth.contract(address=CHAINLINK_ETH_USD, abi=chainlink_abi)
+#v4_pool_manager = w3.eth.contract(address=V4_POOL_MANAGER, abi=v4_pool_manager_abi)
+#v4_state_view = w3.eth.contract(address=V4_STATE_VIEW, abi=v4_state_view_abi)
 
-def get_token_price(address):
-    zero_address = '0x0000000000000000000000000000000000000000'
-    if address == zero_address:
-        url = "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"
-        try:
-            response = requests.get(url)
-            data = response.json()
-            return data.get('ethereum', {}).get('usd', 0)
-        except Exception as e:
-            print(f"Error fetching ETH price: {e}")
-            return 0
-    else:
-        url = f"https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses={address}&vs_currencies=usd"
-        try:
-            response = requests.get(url)
-            data = response.json()
-            return data.get(address.lower(), {}).get('usd', 0)
-        except Exception as e:
-            print(f"Error fetching price for {address}: {e}")
-            return 0
 
+def get_v4_price(token_address):
+    """Try to get price from Uniswap V4 via PoolManager + StateView."""
+    try:
+        token_address = Web3.to_checksum_address(token_address)
+        if token_address in [ZERO, WETH_ADDRESS]:
+            return get_eth_price()
+
+        token_decimals = get_decimals(token_address)
+        weth_decimals = get_decimals(WETH_ADDRESS)
+        eth_usd = get_eth_price()
+
+        # V4 canonical ordering: currency0 < currency1
+        a, b = (token_address, WETH_ADDRESS)
+        if a.lower() > b.lower():
+            a, b = b, a
+
+        # typical v4 fees & tick spacings
+        fee_tiers = [500, 3000, 10000]
+        tick_spacings = [1, 10, 60, 200]
+
+        for fee in fee_tiers:
+            for tick_spacing in tick_spacings:
+                pool_key = (a, b, fee, tick_spacing, ZERO)
+                pool_id = w3.keccak(
+                    w3.codec.encode(
+                        ['(address,address,uint24,int24,address)'],
+                        [pool_key]
+                    )
+                )
+                try:
+                    slot0 = v4_state_view.functions.getSlot0(pool_id).call()
+                    sqrtPriceX96 = slot0[0]
+                    if sqrtPriceX96 == 0:
+                        continue
+
+                    ## Determine which token was token0
+                    token0, token1 = a, b
+                    # Normalize for decimals
+                    if token0.lower() == token_address.lower():
+                        price_token_in_weth = (sqrtPriceX96 ** 2 / 2 ** 192) * (10 ** (token_decimals - weth_decimals))
+                    else:
+                        price_token_in_weth = (2 ** 192 / sqrtPriceX96 ** 2) * (10 ** (token_decimals - weth_decimals))
+                    print(f"[V4] Found pool for {token_address} fee {fee} tickSpacing {tick_spacing}")
+                    return price_token_in_weth * eth_usd
+
+                except Exception:
+                    continue
+
+    except Exception as e:
+        print(f"[V4] Error: {e}")
+    return 0
+
+# --- Helpers ---
+def get_eth_price():
+    return chainlink_eth.functions.latestAnswer().call() / 1e8  # Chainlink ETH/USD
+
+def get_decimals(token):
+    if token in [ZERO, WETH_ADDRESS]:
+        return 18
+    try:
+        contract = w3.eth.contract(address=token, abi=erc20_abi)
+        return contract.functions.decimals().call()
+    except:
+        return 18
+
+def get_token_price(token_address):
+    token_address = Web3.to_checksum_address(token_address)
+    if token_address in [ZERO, WETH_ADDRESS]:
+        return get_eth_price()
+
+    token_decimals = get_decimals(token_address)
+    weth_decimals = get_decimals(WETH_ADDRESS)
+    eth_usd = get_eth_price()
+
+    # --- Try Uniswap V4 first --- not work yet
+    #v4_price = get_v4_price(token_address)
+    #if v4_price > 0:
+    #    return v4_price
+    #print(f"{token_address} V4 failed, trying V3...")
+
+    # --- Try Uniswap V3 ---
+    fee_tiers = [500, 3000, 10000]
+    for fee in fee_tiers:
+        try:
+            pool = v3_factory.functions.getPool(token_address, WETH_ADDRESS, fee).call()
+            if pool != ZERO:
+                pool_abi = [
+                    {"inputs": [], "name": "slot0",
+                     "outputs": [{"internalType": "uint160", "name": "sqrtPriceX96", "type": "uint160"},
+                                 {"internalType": "int24", "name": "tick", "type": "int24"},
+                                 {"internalType": "uint16", "name": "observationIndex", "type": "uint16"},
+                                 {"internalType": "uint16", "name": "observationCardinality", "type": "uint16"},
+                                 {"internalType": "uint16", "name": "observationCardinalityNext", "type": "uint16"},
+                                 {"internalType": "uint8", "name": "feeProtocol", "type": "uint8"},
+                                 {"internalType": "bool", "name": "unlocked", "type": "bool"}],
+                     "stateMutability": "view", "type": "function"},
+                    {"inputs": [], "name": "token0",
+                     "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+                     "stateMutability": "view", "type": "function"},
+                    {"inputs": [], "name": "token1",
+                     "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+                     "stateMutability": "view", "type": "function"},
+                ]
+                pool_c = w3.eth.contract(address=pool, abi=pool_abi)
+                sqrtPriceX96 = pool_c.functions.slot0().call()[0]
+                t0 = pool_c.functions.token0().call()
+                t1 = pool_c.functions.token1().call()
+
+                if sqrtPriceX96 == 0:
+                    continue
+
+                # Normalize for decimals
+                if t0.lower() == token_address.lower():
+                    price_token_in_weth = (sqrtPriceX96 ** 2 / 2 ** 192) * (10 ** (token_decimals - weth_decimals))
+                else:
+                    price_token_in_weth = (2 ** 192 / sqrtPriceX96 ** 2) * (10 ** (token_decimals - weth_decimals))
+
+                return price_token_in_weth * eth_usd
+        except Exception:
+            continue
+    print("V3 failed try V2")
+
+    # --- Try Uniswap V2 ---
+    try:
+        pair = v2_factory.functions.getPair(token_address, WETH_ADDRESS).call()
+        if pair != ZERO:
+            pair_abi = [
+                {"inputs": [], "name": "getReserves",
+                 "outputs": [{"internalType": "uint112", "name": "reserve0", "type": "uint112"},
+                             {"internalType": "uint112", "name": "reserve1", "type": "uint112"},
+                             {"internalType": "uint32", "name": "blockTimestampLast", "type": "uint32"}],
+                 "stateMutability": "view", "type": "function"},
+                {"inputs": [], "name": "token0",
+                 "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+                 "stateMutability": "view", "type": "function"},
+                {"inputs": [], "name": "token1",
+                 "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+                 "stateMutability": "view", "type": "function"}
+            ]
+            pair_c = w3.eth.contract(address=pair, abi=pair_abi)
+            reserves = pair_c.functions.getReserves().call()
+            r0, r1 = reserves[0], reserves[1]
+            t0 = pair_c.functions.token0().call()
+            t1 = pair_c.functions.token1().call()
+            if r0 == 0 or r1 == 0:
+                return 0
+            if t0.lower() == token_address.lower():
+                price_token_in_weth = r1 / r0 * (10 ** (token_decimals - weth_decimals))
+            else:
+                price_token_in_weth = r0 / r1 * (10 ** (token_decimals - weth_decimals))
+            return price_token_in_weth * eth_usd
+    except Exception:
+        pass
+
+    return 0
+
+# Get Fee and Price
 try:
     # Step 1: Check if position is minted
     try:
