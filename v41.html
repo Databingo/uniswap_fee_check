@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Uniswap V4 Fee Checker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .input-group {
+      margin-bottom: 10px;
+    }
+    label {
+      display: inline-block;
+      width: 150px;
+    }
+    input, button {
+      padding: 5px;
+      margin: 5px;
+    }
+    #output {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>Uniswap V4 Fee Checker</h1>
+
+  <div class="input-group">
+    <label>Token ID:</label>
+    <input type="number" id="tokenId" value="85000">
+  </div>
+  <div class="input-group">
+    <label>Token0 Price (USD):</label>
+    <input type="number" id="token0Price" value="0" placeholder="Enter Token0 price in USD (optional)">
+  </div>
+  <div class="input-group">
+    <label>Token1 Price (USD):</label>
+    <input type="number" id="token1Price" value="0" placeholder="Enter Token1 price in USD (optional)">
+  </div>
+  <div class="input-group">
+    <label>Infura API Key (optional):</label>
+    <input type="text" id="infuraKey" value="" placeholder="Enter Infura API Key (optional)">
+  </div>
+
+  <button onclick="checkFees()">Check Fees</button>
+  <div id="output">Results will appear here...</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.0/dist/ethers.umd.js"></script>
+  <script>
+    if (typeof ethers === 'undefined') {
+      document.getElementById('output').textContent = 'Error: ethers.js failed to load.';
+      throw new Error('ethers.js not defined');
+    }
+
+    const POSITION_MANAGER = '0xbd216513d74c8cf14cf4747e6aaa6420ff64ee9e';
+    const STATE_VIEW = '0x7ffe42c4a5deea5b0fec41c94c136cf115597227';
+    const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+
+    const positionManagerAbi = [
+      {
+        "inputs": [{"internalType": "uint256", "name": "tokenId", "type": "uint256"}],
+        "name": "getPoolAndPositionInfo",
+        "outputs": [
+          {
+            "components": [
+              {"internalType": "address", "name": "currency0", "type": "address"},
+              {"internalType": "address", "name": "currency1", "type": "address"},
+              {"internalType": "uint24", "name": "fee", "type": "uint24"},
+              {"internalType": "int24", "name": "tickSpacing", "type": "int24"},
+              {"internalType": "address", "name": "hooks", "type": "address"}
+            ],
+            "name": "poolKey",
+            "type": "tuple"
+          },
+          {"internalType": "uint256", "name": "info", "type": "uint256"}
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [{"internalType": "uint256", "name": "tokenId", "type": "uint256"}],
+        "name": "ownerOf",
+        "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+        "stateMutability": "view",
+        "type": "function"
+      }
+    ];
+
+    const stateViewAbi = [
+      {
+        "inputs": [
+          {"internalType": "bytes32", "name": "", "type": "bytes32"},
+          {"internalType": "address", "name": "", "type": "address"},
+          {"internalType": "int24", "name": "", "type": "int24"},
+          {"internalType": "int24", "name": "", "type": "int24"},
+          {"internalType": "bytes32", "name": "", "type": "bytes32"}
+        ],
+        "name": "getPositionInfo",
+        "outputs": [
+          {"internalType": "uint128", "name": "liquidity", "type": "uint128"},
+          {"internalType": "uint256", "name": "feeGrowthInside0LastX128", "type": "uint256"},
+          {"internalType": "uint256", "name": "feeGrowthInside1LastX128", "type": "uint256"}
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {"internalType": "bytes32", "name": "", "type": "bytes32"},
+          {"internalType": "int24", "name": "", "type": "int24"},
+          {"internalType": "int24", "name": "", "type": "int24"}
+        ],
+        "name": "getFeeGrowthInside",
+        "outputs": [
+          {"internalType": "uint256", "name": "feeGrowthInside0X128", "type": "uint256"},
+          {"internalType": "uint256", "name": "feeGrowthInside1X128", "type": "uint256"}
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      }
+    ];
+
+    const erc20Abi = [
+      {"inputs": [], "name": "decimals", "outputs": [{"internalType": "uint8", "name": "", "type": "uint8"}], "stateMutability": "view", "type": "function"}
+    ];
+
+    async function get_token_price(address) {
+      try {
+        if (address === ZERO_ADDRESS) {
+          const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+          const j = await r.json();
+          return j.ethereum.usd;
+        }
+
+        // ERC20: resolve by Ethereum contract address
+        const r = await fetch(`https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=${address}&vs_currencies=usd`);
+        const j = await r.json();
+        const key = Object.keys(j)[0];
+        return key ? j[key].usd : 0;
+      } catch {
+        return 0;
+      }
+    }
+
+    async function checkFees() {
+      const output = document.getElementById('output');
+      output.textContent = 'Fetching data...';
+
+      try {
+        const tokenId = parseInt(document.getElementById('tokenId').value) || 85000;
+        const token0Price = parseFloat(document.getElementById('token0Price').value) || 0;
+        const token1Price = parseFloat(document.getElementById('token1Price').value) || 0;
+        const infuraKey = document.getElementById('infuraKey').value.trim();
+
+        const rpcUrl = infuraKey ? `https://mainnet.infura.io/v3/${infuraKey}` : 'https://eth.llamarpc.com';
+        const provider = new ethers.JsonRpcProvider(rpcUrl);
+        const positionManager = new ethers.Contract(POSITION_MANAGER, positionManagerAbi, provider);
+        const stateView = new ethers.Contract(STATE_VIEW, stateViewAbi, provider);
+
+        // Owner check
+        let owner;
+        try {
+          owner = await positionManager.ownerOf(tokenId);
+          if (owner === ZERO_ADDRESS) {
+            output.textContent = `Position ${tokenId} is burned (no owner).`;
+            return;
+          }
+        } catch (e) {
+          output.textContent = `Position ${tokenId} not minted.`;
+          return;
+        }
+
+        // Pool info
+        let poolKey, info;
+        [poolKey, info] = await positionManager.getPoolAndPositionInfo(tokenId);
+
+        info = BigInt(info);
+        let tickUpper = Number((info >> 32n) & 0xffffffn);
+        let tickLower = Number((info >> 8n) & 0xffffffn);
+        if (tickUpper >= 0x800000) tickUpper -= 0x1000000;
+        if (tickLower >= 0x800000) tickLower -= 0x1000000;
+
+        const poolKeyEncoded = ethers.AbiCoder.defaultAbiCoder().encode(
+          ['tuple(address,address,uint24,int24,address)'],
+          [[poolKey.currency0, poolKey.currency1, poolKey.fee, poolKey.tickSpacing, poolKey.hooks]]
+        );
+        const poolId = ethers.keccak256(poolKeyEncoded);
+        const salt = ethers.zeroPadValue(ethers.toBeHex(tokenId), 32);
+
+        // Position info
+        const [liquidity, feeGrowthInside0Last, feeGrowthInside1Last] = await stateView.getPositionInfo(
+          poolId, POSITION_MANAGER, tickLower, tickUpper, salt
+        );
+        const [feeGrowthInside0Current, feeGrowthInside1Current] = await stateView.getFeeGrowthInside(
+          poolId, tickLower, tickUpper
+        );
+
+        // --- SAFE BIGINT MATH ---
+        const Q128 = 1n << 128n;
+        const liquidityBI = BigInt(liquidity);
+        const feeGrowthInside0CurrentBI = BigInt(feeGrowthInside0Current);
+        const feeGrowthInside0LastBI = BigInt(feeGrowthInside0Last);
+        const feeGrowthInside1CurrentBI = BigInt(feeGrowthInside1Current);
+        const feeGrowthInside1LastBI = BigInt(feeGrowthInside1Last);
+
+        const token0Fees = feeGrowthInside0CurrentBI >= feeGrowthInside0LastBI
+          ? (feeGrowthInside0CurrentBI - feeGrowthInside0LastBI) * liquidityBI / Q128
+          : 0n;
+        const token1Fees = feeGrowthInside1CurrentBI >= feeGrowthInside1LastBI
+          ? (feeGrowthInside1CurrentBI - feeGrowthInside1LastBI) * liquidityBI / Q128
+          : 0n;
+
+        // --- TOKEN DECIMALS ---
+        let token0Decimals = 18;
+        let token1Decimals = 18;
+        let token0Name = poolKey.currency0 === ZERO_ADDRESS ? 'ETH' : poolKey.currency0;
+        let token1Name = poolKey.currency1 === ZERO_ADDRESS ? 'ETH' : poolKey.currency1;
+
+        if (poolKey.currency0 !== ZERO_ADDRESS) {
+          try {
+            const token0Contract = new ethers.Contract(poolKey.currency0, erc20Abi, provider);
+            token0Decimals = await token0Contract.decimals();
+          } catch (e) { console.warn("Token0 decimals fetch failed:", e); }
+        }
+        if (poolKey.currency1 !== ZERO_ADDRESS) {
+          try {
+            const token1Contract = new ethers.Contract(poolKey.currency1, erc20Abi, provider);
+            token1Decimals = await token1Contract.decimals();
+          } catch (e) { console.warn("Token1 decimals fetch failed:", e); }
+        }
+
+        // --- FORMAT UNITS (no precision loss) ---
+        const token0FeesAdj= parseFloat(ethers.formatUnits(token0Fees, token0Decimals));
+        const token1FeesAdj= parseFloat(ethers.formatUnits(token1Fees, token1Decimals));
+
+        // Fetch live USD prices
+        const token0PriceUSD = await get_token_price(poolKey.currency0);
+        const token1PriceUSD = await get_token_price(poolKey.currency1);
+
+        const token0Usd = token0FeesAdj * token0PriceUSD;
+        const token1Usd = token1FeesAdj * token1PriceUSD;
+        const totalUsd = token0Usd + token1Usd;
+        output.textContent =
+          `✅ Position ${tokenId}\n` +
+          `Owner: ${owner}\n\n` +
+          `Token0 (${token0Name}): ${token0FeesAdj} (USD: ${token0Usd.toFixed(2)})\n` +
+          `Token1 (${token1Name}): ${token1FeesAdj} (USD: ${token1Usd.toFixed(2)})\n` +
+          `Total USD: ${totalUsd.toFixed(2)}`;
+      } catch (e) {
+        document.getElementById('output').textContent = `❌ Error: ${e.message}`;
+        console.error(e);
+      }
+    }
+  </script>
+</body>
+</html>

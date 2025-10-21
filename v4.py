@@ -127,59 +127,6 @@ chainlink_eth = w3.eth.contract(address=CHAINLINK_ETH_USD, abi=chainlink_abi)
 #v4_pool_manager = w3.eth.contract(address=V4_POOL_MANAGER, abi=v4_pool_manager_abi)
 #v4_state_view = w3.eth.contract(address=V4_STATE_VIEW, abi=v4_state_view_abi)
 
-
-def get_v4_price(token_address):
-    """Try to get price from Uniswap V4 via PoolManager + StateView."""
-    try:
-        token_address = Web3.to_checksum_address(token_address)
-        if token_address in [ZERO, WETH_ADDRESS]:
-            return get_eth_price()
-
-        token_decimals = get_decimals(token_address)
-        weth_decimals = get_decimals(WETH_ADDRESS)
-        eth_usd = get_eth_price()
-
-        # V4 canonical ordering: currency0 < currency1
-        a, b = (token_address, WETH_ADDRESS)
-        if a.lower() > b.lower():
-            a, b = b, a
-
-        # typical v4 fees & tick spacings
-        fee_tiers = [500, 3000, 10000]
-        tick_spacings = [1, 10, 60, 200]
-
-        for fee in fee_tiers:
-            for tick_spacing in tick_spacings:
-                pool_key = (a, b, fee, tick_spacing, ZERO)
-                pool_id = w3.keccak(
-                    w3.codec.encode(
-                        ['(address,address,uint24,int24,address)'],
-                        [pool_key]
-                    )
-                )
-                try:
-                    slot0 = v4_state_view.functions.getSlot0(pool_id).call()
-                    sqrtPriceX96 = slot0[0]
-                    if sqrtPriceX96 == 0:
-                        continue
-
-                    ## Determine which token was token0
-                    token0, token1 = a, b
-                    # Normalize for decimals
-                    if token0.lower() == token_address.lower():
-                        price_token_in_weth = (sqrtPriceX96 ** 2 / 2 ** 192) * (10 ** (token_decimals - weth_decimals))
-                    else:
-                        price_token_in_weth = (2 ** 192 / sqrtPriceX96 ** 2) * (10 ** (token_decimals - weth_decimals))
-                    print(f"[V4] Found pool for {token_address} fee {fee} tickSpacing {tick_spacing}")
-                    return price_token_in_weth * eth_usd
-
-                except Exception:
-                    continue
-
-    except Exception as e:
-        print(f"[V4] Error: {e}")
-    return 0
-
 # --- Helpers ---
 def get_eth_price():
     return chainlink_eth.functions.latestAnswer().call() / 1e8  # Chainlink ETH/USD
@@ -203,10 +150,6 @@ def get_token_price(token_address):
     eth_usd = get_eth_price()
 
     # --- Try Uniswap V4 first --- not work yet
-    #v4_price = get_v4_price(token_address)
-    #if v4_price > 0:
-    #    return v4_price
-    #print(f"{token_address} V4 failed, trying V3...")
 
     # --- Try Uniswap V3 ---
     fee_tiers = [500, 3000, 10000]
